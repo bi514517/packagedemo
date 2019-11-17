@@ -3,46 +3,22 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Config;
+use App\Http\Controllers\LeechTruyenYY;
+use App\Http\Controllers\LeechTruyenFull;
 
-class User extends Controller
+class StartLeech extends Controller
 {
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function login(Request $request)
+    public function start()
     {
-        $request = json_decode(str_replace(chr(92), "", $request->getContent()));
-        $data = DB::table('user')->select('user.id')
-            ->where('user.email', $request->email)->get();
-        if (count($data) == 0) {
-            $email = $request->email;
-            $name = isset($request->name) ? $request->name : $request->email;
-            $avatar = isset($request->avatar) ? $request->avatar : Config::get('configVar.defaultImage.userAvatar');
-            DB::table('user')->insert(
-                [
-                    'email' => $email,
-                    'name' => $name,
-                    'avatar' => $avatar
-                ]
-            );
-            $data = DB::table('user')->select('user.id')
-                ->where('user.email', $request->email)->get();
-            return response()->json([
-                'status' => 'true',
-                'data' => $data[0]->id,
-                'messenge' => 'insert success'
-            ]);
-        } else {
-            return response()->json([
-                'status' => 'true',
-                'data' => $data[0]->id,
-                'messenge' => 'get success'
-            ]);
-        }
+        (new LeechTruyenFull)->start();
+        (new LeechTruyenYY)->start();
+        // viết clear log và gửi mail
+
     }
 
     /**

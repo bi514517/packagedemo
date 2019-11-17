@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="{{ asset('css/style.css')}}">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
     @yield('header')
 </head>
 @yield('style')
@@ -23,7 +22,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">
+                <a class="navbar-brand" href="../">
                     <img src="http://www.oogazone.com/wp-content/uploads/2018/05/unique-open-book-file-free.jpg">
                 </a>
             </div>
@@ -75,7 +74,7 @@
         </div>
     </nav>
 
-    <div class="container-fluid text-center">
+    <div class="container-fluid">
         @yield('content')
     </div>
 

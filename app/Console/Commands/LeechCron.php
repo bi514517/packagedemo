@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\StartLeech;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -38,6 +39,6 @@ class LeechCron extends Command
      */
     public function handle()
     {
-      
+        (new StartLeech)->start();
     }
 }

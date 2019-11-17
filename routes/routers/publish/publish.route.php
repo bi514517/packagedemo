@@ -1,4 +1,4 @@
 <?php
 
-  Route::get('/', 'Home\Home@index');
-?>
+Route::get('/', 'publish\publish@home');
+Route::get('/truyen/{id}', 'publish\publish@detail');

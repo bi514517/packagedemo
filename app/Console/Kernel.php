@@ -4,6 +4,7 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\Config;
 
 class Kernel extends ConsoleKernel
 {
@@ -26,7 +27,12 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')
         //          ->hourly();
-        $schedule->call('App\Http\Controllers\LeechTruyenYY@updateBooks')->name('leechyy')->withoutOverlapping(1);
+        $schedule->command('leech:cron')
+            ->name('leech')
+            ->withoutOverlapping(1)
+            ->emailOutputTo(Config::get('configVar.logsEmail.normal'))
+            ->emailOutputOnFailure(Config::get('configVar.logsEmail.error'));
+        //$schedule->call('App\Http\Controllers\StartLeech@start')->name('leechyy')->withoutOverlapping(1);
     }
 
     /**
@@ -36,7 +42,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }
