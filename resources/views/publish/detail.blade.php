@@ -23,6 +23,28 @@
       span.label.label-danger,span.label.label-success,span.label.label-primary{
         line-height: 20px;
       }
+      #chapters-table {
+        font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      #chapters-table td, #chapters-table th {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+
+      #chapters-table tr:nth-child(even){background-color: #f2f2f2;}
+
+      #chapters-table tr:hover {background-color: #ddd;}
+
+      #chapters-table th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #4CAF50;
+        color: white;
+      }
     </style>
 @endsection
 @section('content')
@@ -46,7 +68,7 @@
       <h5>{{$book->authorName}}</h5>
       <h4 class="h5">
         @foreach ($book->categories as $category)
-          <a href="{{url('/the-loai/'.$category->id)}}">
+          <a href="{{url('/the-loai/'.$category->id)}}" style="text-decoration: none;">
           @if($category->accept==1)
           <span class="label label-danger">{{$category->name}}</span>
           @else
@@ -69,7 +91,7 @@
       <h4><small>Danh sách chương</small></h4>
       <hr>
       
-      <table>
+      <table id="chapters-table">
         <tr>
           <th>Chương số</th>
           <th>Tên chương</th>
@@ -79,8 +101,10 @@
           @foreach($book->chapters as $chapter)
           <tr>
             <td>{{$chapter->stt}}</td>
-            <td>{{$chapter->name}}</td>
-            <td>{{$chapter->timeUpload}}</td>
+            <td onclick="window.location.href = '{{url('doc-truyen/' . $book->bookId . '/chuong-' . $chapter->stt . '.html')}}';">
+              {{$chapter->name}}
+            </td>
+            <td title="{{timeAgo($chapter->timeUpload)}}">{{$chapter->timeUpload}}</td>
           </tr>
           @endforeach
        

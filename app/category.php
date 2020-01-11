@@ -4,10 +4,20 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-
+use App\utils\utilsFunction;
 
 class category extends Model
 {
+
+    public static function insertCategories($categories)
+    {
+        foreach ($categories as $category) {
+            $query = "insert INTO category (category.id,category.name)
+      VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE category.name = VALUES(category.name)";
+            DB::insert($query, [utilsFunction::createSlugId($category), $category]);
+        }
+    }
     public static function getALl()
     {
         $data = DB::table('category')->select('category.id', 'category.name', 'category.accept')->get();

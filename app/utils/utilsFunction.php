@@ -3,8 +3,10 @@
 namespace App\utils;
 
 use App\chapter;
+use Exception;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class utilsFunction
 {
@@ -45,13 +47,15 @@ class utilsFunction
     public static function saveChapter($bookId, $chapterStt, $content)
     {
         $charset = '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">';
+        $content = $charset . $content;
         // Create the context for the request
         $context = stream_context_create(array(
             'http' => array(
                 // http://www.php.net/manual/en/context.http.php
                 'method' => 'POST',
                 'header' => "Content-Type: text/html",
-                'content' => ($charset . $content)
+                'timeout' => 120,
+                'content' => $content
             )
         ));
         try {
@@ -68,11 +72,21 @@ class utilsFunction
         }
         return true;
     }
-    public static function getChapter($bookId, $chapterStt)
+    public static function getChapterContent($bookId, $chapterStt)
     {
-        $url = Config::get("configVar.firebase.storageUrl") . $bookId . "2%F" . $chapterStt . '.html';
-        $contents = str_get_html(file_get_contents($url));
-        return $contents;
+        try {
+            // Send the request
+            $url = Config::get("configVar.firebase.storageUrl") . $bookId . "%2F" . $chapterStt . '.html?alt=media';
+            $contents = file_get_contents($url);
+            if ($contents === FALSE) {
+                die('Error');
+            } else {
+                return $contents;
+            }
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            return "nội dung trang đã bị xóa";
+        }
     }
     public static function removeAccents($str)
     {

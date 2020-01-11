@@ -22,7 +22,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="../">
+            <a class="navbar-brand" href="{{url('/')}}">
                     <img src="http://www.oogazone.com/wp-content/uploads/2018/05/unique-open-book-file-free.jpg">
                 </a>
             </div>

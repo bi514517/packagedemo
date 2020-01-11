@@ -10,6 +10,16 @@ use App\utils\utilsFunction;
 
 class book extends Model
 {
+    public static function insertBook($bookName, $bookAvatar, $bookDesciption, $authorName, $bookDatePublication, $bookStatus)
+    {
+        $query = "insert INTO book(book.id, book.avatar, book.name, book.description, book.authorId , book.datePublication , book.lastestUpdate , book.status)
+                VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE book.status = VALUES(book.status)";
+        DB::insert(
+            $query,
+            [utilsFunction::createSlugId($bookName), $bookAvatar, $bookName, $bookDesciption, utilsFunction::createSlugId($authorName), $bookDatePublication, $bookDatePublication, $bookStatus]
+        );
+    }
+
     public static function getJustUpdatedBook($limit = 30)
     {
         $books = DB::table("book")
@@ -77,9 +87,9 @@ class book extends Model
                 "lastestUpdate",
                 "submitUserId",
                 "status",
-                DB::raw(' IFNULL(ROUND(SUM(user_book.vote)/Count(user_book.vote),1),0) as vote ')
+                DB::raw(' IFNULL(ROUND(SUM(book_user.vote)/Count(book_user.vote),1),0) as vote ')
             )
-            ->leftJoin('user_book', 'user_book.bookId', '=', 'book.id')
+            ->leftJoin('book_user', 'book_user.bookId', '=', 'book.id')
             ->leftJoin('author', 'author.id', '=', 'book.authorId')
             ->groupBy("book.id")
             ->orderBy('vote', 'desc')
@@ -103,9 +113,9 @@ class book extends Model
                 "submitUserId",
                 "user.name as submitUserName",
                 "status",
-                DB::raw(' IFNULL(ROUND(SUM(user_book.vote)/Count(user_book.vote),1),0) as vote ')
+                DB::raw(' IFNULL(ROUND(SUM(book_user.vote)/Count(book_user.vote),1),0) as vote ')
             )
-            ->leftJoin('user_book', 'user_book.bookId', '=', 'book.id')
+            ->leftJoin('book_user', 'book_user.bookId', '=', 'book.id')
             ->leftJoin('author', 'author.id', '=', 'book.authorId')
             ->leftJoin('user', 'user.id', 'book.submitUserId')
             ->where("book.id", $bookId)
@@ -118,12 +128,28 @@ class book extends Model
         $data->pagination = utilsFunction::pagination($page, $amountOfpage, $count);
         return $data;
     }
-    function delBook($bookId)
+    public static function delBook($bookId)
     {
         DB::table("book_category")->where("bookId", $bookId)->delete();
         DB::table("book_tag")->where("bookId", $bookId)->delete();
-        DB::table("user_book")->where("bookId", $bookId)->delete();
+        DB::table("book_user")->where("bookId", $bookId)->delete();
         DB::table("book")->where("book.Id", $bookId)->delete();
         echo "đã xóa truyện " . $bookId;
+    }
+
+    public static function delBookIfNoChapt($bookId)
+    {
+        if (count(chapter::getChaptersByBook($bookId)) <= 0) {
+            book::delBook($bookId);
+        }
+    }
+
+    public static function updateLastChapt($bookId, $chaptCount, $lastChaptname, $lastChapStt)
+    {
+        DB::table("book")->where("book.Id", $bookId)->update([
+            "chaptCount" => $chaptCount,
+            "lastChaptname" => $lastChaptname,
+            "lastChapStt" => $lastChapStt
+        ]);
     }
 }

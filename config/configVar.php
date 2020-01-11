@@ -9,7 +9,7 @@ return [
         "tags" => []
     ],
     "truyenfull" => [
-        "domain" => "https://truyenfull.vn",
+        "domain" => "https://truyenfull.net",
         "moicapnhat" => "ajax.php?type=new_select&id=all",
         "danhsachchuong" => "ajax.php?type=chapter_option&data=",
         "requireLogin" => "Truyện này yêu cầu đăng nhập mới được xem chương.",

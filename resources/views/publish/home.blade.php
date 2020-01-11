@@ -12,7 +12,7 @@
           <ul class="dropdown-menu" role="menu">
             @foreach($categoriesList as $category)
             <li class="dropdown-item">
-              <a href="/danh-sach/{{$category->id}}/">{{$category->name}}</a>
+              <a href="{{url('/danh-sach/' . $category->id)}}">{{$category->name}}</a>
             </li>
             @endforeach
           </ul>
@@ -94,7 +94,7 @@
         <div class="hidden-xs col-sm-3 col-md-3 col-cat">
           <h6>
             @foreach($justUpdatedBook->categories as $category)
-            <a itemprop="genre" href="/the-loai/{{$category->id}}" title="{{$category->name}}">
+          <a itemprop="genre" href="{{url('/the-loai/' . $category->id)}}" title="{{$category->name}}">
               {{$category->name}}
             </a>
             @if(!$loop->last)
@@ -104,7 +104,7 @@
             <h6>
         </div>
         <div class="col-xs-3 col-sm-3 col-md-2 col-chap text-info">
-          <a href="doc-truyen/{{$justUpdatedBook->bookId}}/chuong-{{$justUpdatedBook->lastchapter}}/" title="{{$justUpdatedBook->bookName}}">
+          <a href="{{url('./doc-truyen/' . $justUpdatedBook->bookId . '/chuong-' . $justUpdatedBook->lastchapter . '.html')}}">
             <h6>
               <span class="chapter-text">
                 C<a class="hidden-xs hidden-sm">hương </a>

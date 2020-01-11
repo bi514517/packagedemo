@@ -16,3 +16,4 @@ require 'routers/leech.route.php';
 |
 */
 require 'routers/publish/publish.route.php';
+require 'routers/admin/admin.route.php';

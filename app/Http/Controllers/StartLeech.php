@@ -15,8 +15,8 @@ class StartLeech extends Controller
      */
     public function start()
     {
-        (new LeechTruyenFull)->start();
         (new LeechTruyenYY)->start();
+        (new LeechTruyenFull)->start();
         // viết clear log và gửi mail
 
     }

@@ -248,6 +248,10 @@ footer {
     .row.content {
         height: auto;
     }
+    .chapter-content-col{
+        padding: 0px ;
+        margin: 0px;
+    }
 }
 
 .detail-image-container {
@@ -264,4 +268,22 @@ footer {
 
 .pagination li a {
     cursor: pointer;
+}
+
+@media screen and (min-width: 768px) {
+    .content{
+        margin: 10px;
+        padding: 50px;
+        background-color: beige;
+    }
+}
+.content{
+    padding: 15px;
+    background-color: beige;
+}
+
+.chapterHeader{
+}
+.inner-content{
+
 }

@@ -2,11 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\author;
+use App\book;
+use App\book_category;
+use App\book_tag;
+use App\category;
+use App\chapter;
+use App\tag;
 use App\utils\utilsFunction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 require 'Dom.php';
 
@@ -36,15 +44,25 @@ class LeechTruyenYY extends Controller
       $bookDesciption = self::getDescription($contents);
       $categories = self::getCategories($detailBonus);
       $tags = self::getTags($detail);
-      self::insertAuthor($authorName);
-      self::insertTags($tags);
-      self::insertCategories($categories);
-      self::insertBook($bookName, $bookAvatar, $bookDesciption, $authorName, $bookDatePublication, $bookStatus);
-      self::insertBook_Category($bookName, $categories);
-      self::insertBook_Tag($bookName, $tags);
+      // thêm sách vào db
+      author::insertAuthor($authorName);
+      tag::insertTags($tags);
+      category::insertCategories($categories);
+      book::insertBook($bookName, $bookAvatar, $bookDesciption, $authorName, $bookDatePublication, $bookStatus);
+      book_category::insertBook_Category($bookName, $categories);
+      book_tag::insertBook_Tag($bookName, $tags);
       //
       self::getChapters($url, $bookName);
-    } catch (Exception $e) { }
+      $bookId = utilsFunction::createSlugId($bookName);
+      book::delBookIfNoChapt($bookId);
+    } catch (Exception $e) {
+      echo "\nERROR : " . $e->getMessage();
+      echo "\nERROR : " . $e;
+      echo "\nERROR : tải truyện thất bại";
+      Log::error($e->getMessage());
+      Log::error($e);
+      Log::error("tải truyện thất bại");
+    }
   }
   public function start()
   {
@@ -105,24 +123,38 @@ class LeechTruyenYY extends Controller
   }
   function getName($detail)
   {
-    $name = $detail->find('h1[class=title]')[0]->innertext;
-    $name = trim(preg_replace('/\s+/', ' ', $name));
-    return strip_tags($name);
+    if (isset($detail->find('h1[class=title]')[0])) {
+      $name = $detail->find('h1[class=title]')[0]->innertext;
+      $name = trim(preg_replace('/\s+/', ' ', $name));
+      return strip_tags($name);
+    } else {
+      throw new Exception("\nkhông tìm thấy tên sách");
+    }
   }
   function getAuthor($detail)
   {
     $name = " ";
-    if (isset($detail->find('div[class=alt-name mb-1]')[0]))
+    if (isset($detail->find('div[class=alt-name mb-1]')[0])) {
       $name = $detail->find('div[class=alt-name mb-1]')[0];
-    if (count($name->find('a')) > 0)
-      $name = $name->find('a')[0]->innertext;
-    $name = trim(preg_replace('/\s+/', ' ', $name));
-    return strip_tags($name);
+      if (isset($name->find('a')[0])) {
+        $name = $name->find('a')[0]->innertext;
+        $name = trim(preg_replace('/\s+/', ' ', $name));
+        return strip_tags($name);
+      }
+    }
+    throw new Exception("\nkhông tìm thấy tên tác giả");
   }
   function getStatus($detailBonus)
   {
-    $status = $detailBonus[1]->find('td')[1]->innertext;
-    return $status;
+    if (isset($detailBonus[1])) {
+      $status = $detailBonus[1];
+      if ($status->find('td')[1]) {
+        $status = $status->find('td')[1]->innertext;
+      }
+      $status = trim(preg_replace('/\s+/', ' ', $status));
+      return $status;
+    }
+    throw new Exception("\nkhông tìm thấy trạng thái");
   }
   function getCategories($detailBonus)
   {
@@ -160,156 +192,104 @@ class LeechTruyenYY extends Controller
         $description .= strip_tags($data, "<p><a><div>");
       } else
       $description .= strip_tags($datas, "<p><a><div>");
+    $description = preg_replace('/<button\b[^>]*>(.*?)<\/button>/is', "", $description);
     return $description;
   }
 
-  function getTabList($contents, $baseUrl)
+  function getTabList($contents, $url)
   {
     $arr = array();
     $listContainer = $contents->find('div[class=cell-box]');
-    if (count($listContainer) > 0) {
+    if (isset($listContainer[0])) {
       $list = $listContainer[0]->find('a');
       foreach ($list as $key) {
         array_push($arr, self::addDomain($key->href));
       }
+    } else {
+      array_push($arr, $url);
     }
-    array_push($arr, $baseUrl);
     return $arr;
   }
-  function getChapters($url, $bookName)
+
+  function getChaptStt($chapUrl)
   {
-    echo "\nđang tải truyện " . $bookName;
-    $url = self::addChapListUrl($url);
-    $contents = str_get_html(file_get_contents($url));
-    $tabList = self::getTabList($contents, $url);
-    $count = 0;
+    $chapUrl = mb_strtolower($chapUrl, 'UTF-8');
+    $res = preg_replace("/[^0-9]/", "", substr($chapUrl, strpos("", "chuong")));
+    return (int) $res;
+  }
+
+  function getNow()
+  {
+    //$time = $detailBonus[5]->find('td')[1]->innertext ."-01-01";
+    $time = now();
+    return $time;
+  }
+
+  function getChapterList($tabList, $bookName)
+  {
+    $bookId = utilsFunction::createSlugId($bookName);
+    $stt = 0;
+    $chapterName = "";
+    // kiểm tra xem tải được gì không
+    $hasDownload = false;
     foreach ($tabList as $tab) {
       $content = str_get_html(file_get_contents($tab));
       $chapters = $content->find('div[class=weui-cells]')[1]->find('a');
-      array_reverse($chapters);
       foreach ($chapters as $chapter) {
         $chapterName = $chapter->find('div[class=weui-cell__bd weui-cell_primary]')[0]->innertext;
+        $chapterName = trim(preg_replace('/\s+/', ' ', $chapterName));
         $chapterUrl = self::addDomain($chapter->href);
-        $count++;
-        $bookId = self::createSlugId($bookName);
-        $isVipRequire = self::checkChapterExist($count, $bookId) ? false : self::downloadChapter($bookId, $chapterUrl, $chapterName, $count);
-        if ($isVipRequire)
-          return;
-        else {
-          self::insertChapter($bookName, $count, $chapterName);
+        $stt = self::getChaptStt($chapterUrl);
+        $hasDownload = true;
+        if (!chapter::checkChapterExist($stt, $bookId)) {
+          $content = self::getChapterContent($chapterUrl);
+          if ($content === true) {
+            echo "\ntừ chương " . $stt . "yêu cầu vip hoặc đăng nhập";
+            Log::info("từ chương " . $stt . "yêu cầu vip hoặc đăng nhập");
+            $hasDownload = $stt != 1;
+            break 2;
+          }
+          if ($hasDownload = utilsFunction::saveChapter($bookId, $stt, $content))
+            $hasDownload = chapter::insertChapter($bookId, $stt, $chapterName);
+          sleep(0.5);
         }
-        sleep(0.5);
       }
     }
+    // nếu có dữ liệu chương update
+    if ($hasDownload) {
+      book::updateLastChapt($bookId, $stt, $chapterName, $stt);
+    } else {
+      book::delBookIfNoChapt($bookId);
+    }
   }
-  function downloadChapter($bookId, $url, $chapterName, $chapterStt)
+
+
+  function getChapterContent($url)
   {
     $data = str_get_html(@file_get_contents($url))->find('div[class=chap-content]');
-    $isVipRequire = (count($data) == 0);
-    if ($isVipRequire === false) {
+    // kiếm tra vip k
+    $isVipRequire = !isset($data[0]);
+    if ($isVipRequire == false) {
+      // kiểm tra có yêu cầu đăng nhập k
       $isVipRequire = (strpos($data[0], 'Truyện này yêu cầu đăng nhập mới được xem chương.') !== false) || strlen($data[0]) < 300;
     }
     $content = $isVipRequire ? null : $data[0];
-    if ($isVipRequire === false) {
-      if (utilsFunction::saveChapter($bookId, $chapterStt, $content))
-        chapter::insertChapter($bookId, $chapterStt, $chapterName);
+    if ($isVipRequire == false) {
+      return $content;
     }
     return $isVipRequire;
   }
-  function insertAuthor($author)
-  {
-    DB::insert(
-      'insert INTO author (author.id,author.name) values (?, ?) ON DUPLICATE KEY UPDATE author.name = VALUES(author.name) ',
-      [self::createSlugId($author), $author]
-    );
-  }
-  function insertCategories($categories)
-  {
-    foreach ($categories as $category) {
-      $query = "insert INTO category (category.id,category.name)
-      VALUES (?, ?)
-       ON DUPLICATE KEY UPDATE category.name = VALUES(category.name)";
-      DB::insert($query, [self::createSlugId($category), $category]);
-    }
-  }
-  function insertTags($tags)
-  {
-    foreach ($tags as $tag) {
-      $query = "insert into tag (tag.name) VALUES
-        (?)
-        ON DUPLICATE KEY UPDATE tag.name = VALUES(tag.name)";
-      DB::insert($query, [$tag]);
-    }
-  }
-  function insertBook($bookName, $bookAvatar, $bookDesciption, $authorName, $bookDatePublication, $bookStatus)
-  {
-    $query = "insert INTO book(book.id, book.avatar, book.name, book.description, book.authorId , book.datePublication , book.lastestUpdate , book.status)
-    VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE book.status = VALUES(book.status)";
-    DB::insert(
-      $query,
-      [self::createSlugId($bookName), $bookAvatar, $bookName, $bookDesciption, self::createSlugId($authorName), $bookDatePublication, $bookDatePublication, $bookStatus]
-    );
-  }
-  function delBook($bookId)
-  {
-    DB::table("book_category")->where("bookId", $bookId)->delete();
-    DB::table("book_tag")->where("bookId", $bookId)->delete();
-    DB::table("user_book")->where("bookId", $bookId)->delete();
-    DB::table("book")->where("book.Id", $bookId)->delete();
-    echo "đã xóa truyện " . $bookId;
-  }
-  function insertBook_Category($bookName, $categories)
-  {
-    $query = "insert into `book_category`(`bookId`, `categoryId`)
-    values (?,?) ON DUPLICATE KEY UPDATE book_category.bookId = VALUES(book_category.bookId)";
-    foreach ($categories as $categoryName) {
-      DB::insert(
-        $query,
-        [self::createSlugId($bookName), self::createSlugId($categoryName)]
-      );
-    }
-  }
-  function insertBook_Tag($bookName, $tags)
-  {
-    $query = "insert INTO book_tag (book_tag.bookId, book_tag.tagId)
-    VALUES  (?,(SELECT tag.id FROM tag WHERE tag.name = ? LIMIT 1)) ON DUPLICATE KEY UPDATE book_tag.bookId = VALUES(book_tag.bookId)";
-    foreach ($tags as $tagName) {
-      DB::insert(
-        $query,
-        [self::createSlugId($bookName), $tagName]
-      );
-    }
-  }
-  function insertChapter($bookName, $stt, $chapterName)
-  {
-    $bookId = self::createSlugId($bookName);
-    $updateTime = now();
-    $query = "insert INTO `chapter`(`bookId`, `stt`, `timeUpload`, `name`) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE chapter.name = values(chapter.name)";
-    DB::insert(
-      $query,
-      [$bookId, $stt, $updateTime, $chapterName]
-    );
-    // update info book
-    DB::table('book')
-      ->where('book.id', $bookId)
-      ->update(['book.lastestUpdate' => $updateTime]);
-  }
-  function checkChapterExist($stt, $bookId)
-  {
-    return DB::table('chapter')
-      ->where('chapter.stt', $stt)
-      ->where('chapter.bookId', $bookId)
-      ->exists();
-  }
 
-  function createSlugId($name)
+  function getChapters($url, $bookName)
   {
-    $id = mb_strtolower($name, 'UTF-8');
-    $id = utilsFunction::removeAccents($id);
-    $id = str_replace(" ", "-", $id);
-    $id = preg_replace("/\s+/", "", $id);
-    $id = preg_replace("/[^a-z0-9\_\-\.]/i", "", $id);
-    $id = str_replace(".", "", $id);
-    return $id;
+    echo "\nđang tải truyện " . $bookName;
+    Log::info("đang tải truyện " . $bookName);
+    $url = self::addChapListUrl($url);
+    $contents = str_get_html(file_get_contents($url));
+    if (!is_object($contents)) {
+      throw new Exception("không lấy được danh sách chương tại đường dẫn " . $url);
+    }
+    $tabList = self::getTabList($contents, $url);
+    self::getChapterList($tabList, $bookName);
   }
 }

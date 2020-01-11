@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\author;
+use App\book;
+use App\book_category;
+use App\book_tag;
+use App\category;
+use App\chapter;
+use App\tag;
 use App\utils\utilsFunction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +78,12 @@ class LeechTruyenFull extends Controller
             $categories = self::getCategories($detail);
             $tags = self::getTags($bookName);
 
+            author::insertAuthor($authorName);
+            tag::insertTags($tags);
+            category::insertCategories($categories);
+            book::insertBook($bookName, $bookAvatar, $bookDesciption, $authorName, $bookDatePublication, $bookStatus);
+            book_category::insertBook_Category($bookName, $categories);
+            book_tag::insertBook_Tag($bookName, $tags);
 
             $truyenFullId = self::getTruyenFullId($contents);
             self::getChapters($url, $truyenFullId, $bookName);
@@ -113,13 +126,16 @@ class LeechTruyenFull extends Controller
         if (isset($avtInfo[0])) {
             $avt = $avtInfo[0]->find("img");
             if (isset($avt[0])) {
-                return $avt[0]->href;
-            } else {
-                throw new Exception("không tìm thấy thẻ chứa ảnh");
+                $src = explode('src="', $avt[0]);
+                if (is_array($src) && count($src) > 1) {
+                    $src = explode('"', $src[1]);
+                    if (is_array($src) && count($src) > 0) {
+                        return $src[0];
+                    }
+                }
             }
-        } else {
-            throw new Exception("không tìm thấy thẻ chứa thông tin ảnh");
         }
+        throw new Exception("không tìm thấy thẻ chứa thông tin ảnh");
     }
     function getStatus($detail)
     {
@@ -213,46 +229,49 @@ class LeechTruyenFull extends Controller
 
     function getChapters($bookUrl, $truyenFullId, $bookName)
     {
+        $bookId = utilsFunction::createSlugId($bookName);
+        $stt = 0;
+        $chaptName = "";
+
         $chapListUrl = self::addDomain(Config::get('configVar.truyenfull.danhsachchuong') . $truyenFullId);
         $contents = str_get_html(file_get_contents($chapListUrl));
         if (!is_object($contents)) {
             throw new Exception("không lấy được danh sách chương tại đường dẫn " . $chapListUrl);
         }
         $chapList = self::getChapList($contents);
-        $chaptArr = [];
         foreach ($chapList as $chapter) {
             $chaptUrl = $bookUrl . $chapter;
-            $contents = str_get_html(file_get_contents($chaptUrl));
-            $chaptName = "";
-            if (!is_object($contents)) {
-                echo "\nINFO : chương " . $chaptName . " không tìm thấy dữ liệu chương";
-                Log::info("chương " . $chaptName . " không tìm thấy dữ liệu chương");
-                continue;
+            $stt = self::getChaptStt($chaptUrl);
+            if (!chapter::checkChapterExist($stt, $bookId)) {
+                $contents = str_get_html(file_get_contents($chaptUrl));
+                if (!is_object($contents)) {
+                    echo "\nINFO : chương " . $stt . " không tìm thấy dữ liệu chương";
+                    Log::info("chương " . $stt . " không tìm thấy dữ liệu chương");
+                    continue;
+                }
+                if (isset($contents->find("a[class=chapter-title]")[0])) {
+                    $chaptName = strip_tags($contents->find("a[class=chapter-title]")[0]);
+                } else {
+                    echo "\nINFO : chương không tìm thấy tên chương";
+                    Log::info("chương không tìm thấy tên chương");
+                    continue;
+                }
+                $contents = $contents->find("div[id=chapter-c]");
+                if (isset($contents[0])) {
+                    // xóa quảng cáo
+                    $contents = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $contents[0]->innertext);
+                } else {
+                    echo "\nINFO : chương " . $chaptName . " không tìm thấy nội dung";
+                    Log::info("chương " . $chaptName . " không tìm thấy nội dung");
+                    continue;
+                }
+                if (utilsFunction::saveChapter($bookId, $stt, $contents))
+                    chapter::insertChapter($bookId, $stt, $chaptName);
+                sleep(0.5);
             }
-            if (isset($contents->find("a[class=chapter-title]")[0])) {
-                $chaptName = strip_tags($contents->find("a[class=chapter-title]")[0]);
-                echo "\nINFO : chương " . $chaptName . " tải thành công";
-                Log::info("chương " . $chaptName . " tải thành công");
-            } else {
-                echo "\nINFO : chương không tìm thấy tên chương";
-                Log::info("chương không tìm thấy tên chương");
-                continue;
-            }
-            $contents = $contents->find("div[id=chapter-c]");
-            if (isset($contents[0])) {
-                // xóa quảng cáo
-                $contents = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $contents[0]->innertext);
-            } else {
-                echo "\nINFO : chương " . $chaptName . " không tìm thấy nội dung";
-                Log::info("chương " . $chaptName . " không tìm thấy nội dung");
-                continue;
-            }
-            $chapObj["name"] = $chaptName;
-            $chapObj["timeUpload"] = self::getNow($chaptUrl);
-            $chapObj["stt"] = self::getChaptStt($chaptUrl);
-            $chapObj["bookId"] = utilsFunction::createSlugId($bookName);
-            array_push($chaptArr, $chapObj);
-            sleep(0.5);
         }
+        // nếu có dữ liệu chương update
+        book::updateLastChapt($bookId, $stt, $chaptName, $stt);
+        book::delBookIfNoChapt($bookId);
     }
 }

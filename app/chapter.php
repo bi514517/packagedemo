@@ -3,20 +3,32 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use App\utils\utilsFunction;
 
 class chapter extends Model
 {
     public static function insertChapter($bookId, $chapterStt, $chapterName)
     {
-        DB::table('chapter')->insert(
-            [
-                'chapter.bookId' => $bookId,
-                'chapter.stt' => $chapterStt,
-                'chapter.name' => $chapterName,
-                'chapter.timeUpload' => now(),
-            ]
-        );
+        try {
+            $updateTime = now();
+            DB::table('chapter')->insert(
+                [
+                    'chapter.bookId' => $bookId,
+                    'chapter.stt' => $chapterStt,
+                    'chapter.name' => $chapterName,
+                    'chapter.timeUpload' => $updateTime,
+                ]
+            );
+            // update info book
+            DB::table('book')
+                ->where('book.id', $bookId)
+                ->update(['book.lastestUpdate' => $updateTime]);
+            return true;
+        } catch (QueryException $ex) {
+            return false;
+        }
     }
     public static function getLastChapterByBook($bookId)
     {
@@ -43,5 +55,38 @@ class chapter extends Model
     {
         $count = DB::table("chapter")->where("bookId", $bookId)->count();
         return $count;
+    }
+
+    public static function checkChapterExist($stt, $bookId)
+    {
+        return DB::table('chapter')
+            ->where('chapter.stt', $stt)
+            ->where('chapter.bookId', $bookId)
+            ->exists();
+    }
+    
+    public static function saveChapter($bookId, $chapterStt, $content)
+    {
+        return utilsFunction::saveChapter($bookId, $chapterStt, $content);
+    }
+
+    public static function getChapter($bookId, $stt)
+    {
+        $info = DB::table('book')
+        ->select(
+            "book.id as bookId",
+            "book.name as bookName",
+            "book.avatar",
+            "chapter.name as chapterName",
+            "chapter.stt"
+        )
+        ->leftJoin('chapter', 'chapter.bookId', '=', 'book.id')
+        ->where('chapter.stt', $stt)
+        ->where('chapter.bookId', $bookId)
+        ->first();
+        $result = [];
+        $result["data"] = utilsFunction::getChapterContent($bookId, $stt);
+        $result["info"] = $info;
+        return json_decode(json_encode($result));
     }
 }

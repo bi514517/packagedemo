@@ -7,6 +7,15 @@ use Illuminate\Support\Facades\DB;
 
 class tag extends Model
 {
+    public static function insertTags($tags)
+    {
+        foreach ($tags as $tag) {
+            $query = "insert into tag (tag.name) VALUES
+        (?)
+        ON DUPLICATE KEY UPDATE tag.name = VALUES(tag.name)";
+            DB::insert($query, [$tag]);
+        }
+    }
     public static function getALl()
     {
         $data = DB::table('tag')->select('tag.id', 'tag.name')->get();
