@@ -68,6 +68,7 @@ class utilsFunction
             }
         } catch (Exception $e) {
             echo $e->getMessage();
+            Log::info($e->getMessage());
             return false;
         }
         return true;

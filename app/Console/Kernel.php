@@ -32,7 +32,7 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping(1)
             ->emailOutputTo(Config::get('configVar.logsEmail.normal'))
             ->emailOutputOnFailure(Config::get('configVar.logsEmail.error'));
-        //$schedule->call('App\Http\Controllers\StartLeech@start')->name('leechyy')->withoutOverlapping(1);
+        //$schedule->call('App\Http\Controllers\StartLeech@start')->name('leech')->withoutOverlapping(1);
     }
 
     /**

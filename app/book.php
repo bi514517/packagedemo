@@ -97,7 +97,7 @@ class book extends Model
             ->get();
         return $data;
     }
-    public static function getBookById($bookId, $page = 1, $amountOfpage = 99999)
+    public static function getBookById($bookId, $chapterPage = 1, $amountOfChapterPage = 99999)
     {
         $data = DB::table('book')
             ->select(
@@ -120,12 +120,12 @@ class book extends Model
             ->leftJoin('user', 'user.id', 'book.submitUserId')
             ->where("book.id", $bookId)
             ->first();
-        $data->chapters = chapter::getChaptersByBook($bookId, $amountOfpage, $page);
+        $data->chapters = chapter::getChaptersByBook($bookId, $amountOfChapterPage, $chapterPage);
         $data->categories = category::getCategoryByBookId($bookId);
         $data->tags = tag::getTagsByBookId($bookId);
-        $data->page = $page;
+        $data->page = $chapterPage;
         $count = chapter::countChaptersByBook($bookId);
-        $data->pagination = utilsFunction::pagination($page, $amountOfpage, $count);
+        $data->pagination = utilsFunction::pagination($chapterPage, $amountOfChapterPage, $count);
         return $data;
     }
     public static function delBook($bookId)

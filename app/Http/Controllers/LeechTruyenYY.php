@@ -249,8 +249,12 @@ class LeechTruyenYY extends Controller
             $hasDownload = $stt != 1;
             break 2;
           }
-          if ($hasDownload = utilsFunction::saveChapter($bookId, $stt, $content))
+          if ($hasDownload = chapter::saveChapter($bookId, $stt, $content))
             $hasDownload = chapter::insertChapter($bookId, $stt, $chapterName);
+          else {
+            echo "\nlưu chương " . $stt . " thất bại";
+            Log::info("lưu chương " . $stt . " thất bại");
+          }
           sleep(0.5);
         }
       }

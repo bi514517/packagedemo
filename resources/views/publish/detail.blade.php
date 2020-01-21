@@ -62,7 +62,11 @@
     </div>
 
     <div class="col-sm-7">
-    <h4><small>{{timeAgo($book->datePublication)}} bởi {{$book->submitUserName}}<small></h4>
+    <h4><small>{{timeAgo($book->datePublication)}}
+       @if(isset($book->submitUserName))
+       bởi 
+       @endif
+       {{$book->submitUserName}}<small></h4>
       <hr>
       <h1 class="h2">{{$book->bookName}}</h1>
       <h5>{{$book->authorName}}</h5>

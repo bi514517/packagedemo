@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use App\utils\utilsFunction;
+use Illuminate\Support\Facades\Log;
 
 class chapter extends Model
 {
@@ -27,6 +28,8 @@ class chapter extends Model
                 ->update(['book.lastestUpdate' => $updateTime]);
             return true;
         } catch (QueryException $ex) {
+            echo "\n" + $ex->getMessage();
+            Log::info($ex->getMessage());
             return false;
         }
     }

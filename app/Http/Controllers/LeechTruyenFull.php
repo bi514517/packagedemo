@@ -265,7 +265,7 @@ class LeechTruyenFull extends Controller
                     Log::info("chương " . $chaptName . " không tìm thấy nội dung");
                     continue;
                 }
-                if (utilsFunction::saveChapter($bookId, $stt, $contents))
+                if (chapter::saveChapter($bookId, $stt, $contents))
                     chapter::insertChapter($bookId, $stt, $chaptName);
                 sleep(0.5);
             }
